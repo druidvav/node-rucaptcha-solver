@@ -15,6 +15,7 @@ class Solver {
 
         this.apiKey = settings.apiKey;
         this.retryInterval = settings.retryInterval || 3000;
+        this.retryCount = settings.retryCount || 20;
 
         if (!this.apiKey) {
             throw new Error(`Can't find api key`);
@@ -95,6 +96,7 @@ class Solver {
     async _getAnswer(captchaId) {
         const queryObj = { key: this.apiKey, action: 'get', id: captchaId, json: 1 };
         const url = this.GET_URL + `?${querystring.stringify(queryObj)}`;
+        let tries = this.retryCount;
         do {
             const response = JSON.parse(await request.get({ url: url }));
             if (response.status === 1) {
@@ -103,7 +105,9 @@ class Solver {
                 throw new Error(response.request);
             }
             await delay(this.retryInterval);
-        } while (true);
+            tries--;
+        } while (tries > 0);
+        throw new Error('CAPTCHA_SOLVE_TIMEOUT');
     }
 
     /**
