@@ -1,0 +1,25 @@
+{
+  "name": "dv-rucaptcha-solver",
+  "version": "1.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/druidvav/node-browser.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/druidvav/node-rucaptcha-solver/issues"
+  },
+  "homepage": "https://github.com/druidvav/node-rucaptcha-solver",
+  "dependencies": {
+    "delay": "^2.0.0",
+    "mz": "^2.7.0",
+    "request": "^2.83.0",
+    "request-promise-native": "^1.0.5"
+  }
+}
