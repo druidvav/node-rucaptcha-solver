@@ -95,29 +95,15 @@ class Solver {
     async _getAnswer(captchaId) {
         const queryObj = { key: this.apiKey, action: 'get', id: captchaId, json: 1 };
         const url = this.GET_URL + `?${querystring.stringify(queryObj)}`;
-
-        const makeRequest = async () => await request.get({ url: url });
-
-        let result;
-        while (true) {
-            await delay(this.retryInterval);
-            const json = await makeRequest();
-            const response = JSON.parse(json);
-
-            if (response.status === 1) { // captcha solved
-                result = response.request;
-                break;
-            } else if (
-                response.request !== 'CAPCHA_NOT_READY' &&
-                response.status === 0
-            ) {
-                // throw if we have error
-                // or bad status number
-                break;
+        do {
+            const response = JSON.parse(await request.get({ url: url }));
+            if (response.status === 1) {
+                return response.request;
+            } else if (response.request !== 'CAPCHA_NOT_READY' && response.status === 0) {
                 throw new Error(response.request);
             }
-        }
-        return result;
+            await delay(this.retryInterval);
+        } while (true);
     }
 
     /**
