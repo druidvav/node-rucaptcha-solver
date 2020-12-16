@@ -1,6 +1,6 @@
 {
   "name": "dv-rucaptcha-solver",
-  "version": "1.0.3",
+  "version": "1.0.6",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/druidvav/node-browser.git"
+    "url": "git+ssh://git@github.com/druidvav/node-rucaptcha-solver.git"
   },
   "author": "",
   "license": "MIT",

@@ -16,6 +16,7 @@ class Solver {
         this.apiKey = settings.apiKey;
         this.retryInterval = settings.retryInterval || 3000;
         this.retryCount = settings.retryCount || 20;
+        this.requestTimeout = settings.requestTimeout || 40;
 
         if (!this.apiKey) {
             throw new Error(`Can't find api key`);
@@ -53,7 +54,8 @@ class Solver {
     async getBalance() {
         const queryObj = { key: this.apiKey, action: 'getbalance' };
         const balance = await request.get({
-            url: this.GET_URL + '?' + querystring.stringify(queryObj)
+            url: this.GET_URL + '?' + querystring.stringify(queryObj),
+            timeout: this.requestTimeout * 1000
         });
         return parseFloat(balance);
     }
@@ -62,7 +64,8 @@ class Solver {
     async report(captchaId) {
         const queryObj = { key: this.apiKey, action: 'reportbad', id: captchaId };
         return await request.get({
-            url: this.GET_URL + '?' + querystring.stringify(queryObj)
+            url: this.GET_URL + '?' + querystring.stringify(queryObj),
+            timeout: this.requestTimeout * 1000
         });
     }
 
@@ -78,7 +81,8 @@ class Solver {
 
         const json = await request.post({
             url: url,
-            form: { body : base64Image }
+            form: { body : base64Image },
+            timeout: this.requestTimeout * 1000
         });
         const response = JSON.parse(json);
         if (response.status === 0) {
@@ -98,7 +102,7 @@ class Solver {
         const url = this.GET_URL + `?${querystring.stringify(queryObj)}`;
         let tries = this.retryCount;
         do {
-            const response = JSON.parse(await request.get({ url: url }));
+            const response = JSON.parse(await request.get({ url: url, timeout: this.requestTimeout * 1000 }));
             if (response.status === 1) {
                 return response.request;
             } else if (response.request !== 'CAPCHA_NOT_READY' && response.status === 0) {
@@ -120,7 +124,7 @@ class Solver {
      */
     async _fetchImage(image) {
         if (/^(http|https)/.test(image)) {      // passed url
-            return await request.get({ url: image, encoding: null });
+            return await request.get({ url: image, encoding: null, timeout: this.requestTimeout * 1000 });
         } else if (image instanceof Buffer) {   // passed Buffer object with image
             return image;
         } else if (isBase64(image)) {           // passed base64
