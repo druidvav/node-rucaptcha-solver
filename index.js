@@ -1,7 +1,7 @@
 const querystring = require('querystring');
-const request = require('request-promise-native');
 const fs = require('mz/fs');
 const delay = require('delay');
+const got = require('got');
 
 // check if string is base64
 const isBase64 = str =>
@@ -16,7 +16,7 @@ class Solver {
         this.apiKey = settings.apiKey;
         this.retryInterval = settings.retryInterval || 3000;
         this.retryCount = settings.retryCount || 20;
-        this.requestTimeout = settings.requestTimeout || 40;
+        this.requestTimeout = (settings.requestTimeout || 40) * 1000;
 
         if (!this.apiKey) {
             throw new Error(`Can't find api key`);
@@ -40,33 +40,27 @@ class Solver {
      */
     async solve(image, options = {}) {
         const buffer = await this._fetchImage(image);
-        const base64Image = await this._bufferToBase64(buffer);
-        const id = await this._sendImage(base64Image, options);
+        const id = await this._sendImage(buffer.toString('base64'), options);
         const answer = await this._getAnswer(id);
         return { id, answer };
     }
 
     // noinspection JSUnusedGlobalSymbols
-    /**
-     * get balance on your rucaptcha account
-     * @return {Promise<Number>} balance
-     */
     async getBalance() {
         const queryObj = { key: this.apiKey, action: 'getbalance' };
-        const balance = await request.get({
+        return parseFloat(await got.get({
             url: this.GET_URL + '?' + querystring.stringify(queryObj),
-            timeout: this.requestTimeout * 1000
-        });
-        return parseFloat(balance);
+            timeout: this.requestTimeout
+        }).text());
     }
 
     // noinspection JSUnusedGlobalSymbols
     async report(captchaId) {
         const queryObj = { key: this.apiKey, action: 'reportbad', id: captchaId };
-        return await request.get({
+        return got.get({
             url: this.GET_URL + '?' + querystring.stringify(queryObj),
-            timeout: this.requestTimeout * 1000
-        });
+            timeout: this.requestTimeout
+        }).text();
     }
 
     /**
@@ -79,16 +73,11 @@ class Solver {
         Object.assign(options, { key: this.apiKey, method: 'base64', json: 1 });
         const url = this.POST_URL + `?${querystring.stringify(options)}`;
 
-        const json = await request.post({
-            url: url,
-            form: { body : base64Image },
-            timeout: this.requestTimeout * 1000
-        });
-        const response = JSON.parse(json);
-        if (response.status === 0) {
-            throw new Error(response.request);
+        const data = await got.post({ url: url, form: { body : base64Image }, timeout: this.requestTimeout }).json();
+        if (data.status === 0) {
+            throw new Error(data.request);
         }
-        return parseInt(response.request);
+        return parseInt(data.request);
     }
 
     /**
@@ -102,7 +91,7 @@ class Solver {
         const url = this.GET_URL + `?${querystring.stringify(queryObj)}`;
         let tries = this.retryCount;
         do {
-            const response = JSON.parse(await request.get({ url: url, timeout: this.requestTimeout * 1000 }));
+            const response = await got.get({ url: url, timeout: this.requestTimeout }).json();
             if (response.status === 1) {
                 return response.request;
             } else if (response.request !== 'CAPCHA_NOT_READY' && response.status === 0) {
@@ -114,17 +103,9 @@ class Solver {
         throw new Error('CAPTCHA_SOLVE_TIMEOUT');
     }
 
-    /**
-     * Fetch image from given path
-     * path can be local (some file on your hard drive)
-     * or remote (from wikipedia, for example)
-     * @param  {String|Buffer} [image] variable is a img path or Buffer object or base64 text.
-     * Image path can be remote or local img file.
-     * @return {Promise<Buffer>} resolves to the buffer
-     */
     async _fetchImage(image) {
         if (/^(http|https)/.test(image)) {      // passed url
-            return await request.get({ url: image, encoding: null, timeout: this.requestTimeout * 1000 });
+            return got.get({ url: image, encoding: null, timeout: this.requestTimeout }).buffer();
         } else if (image instanceof Buffer) {   // passed Buffer object with image
             return image;
         } else if (isBase64(image)) {           // passed base64
@@ -132,14 +113,6 @@ class Solver {
         } else {                                // passed local file
             return await fs.readFile(image);
         }
-    }
-    /**
-     * convert buffer to base64 string
-     * @param  {Buffer} buf buffer
-     * @return {String} base64 representation of image
-     */
-    _bufferToBase64(buf) {
-        return buf.toString('base64');
     }
 }
 
